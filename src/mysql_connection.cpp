@@ -1,3 +1,4 @@
+#include <cppformat/format.h>
 #include <mysql.h>
 #include <ookoto/ookoto.h>
 #include <cstdlib>
@@ -7,6 +8,32 @@ namespace ookoto {
 
 class MysqlConnection::Impl {
  public:
+  class MysqlResultSet {
+   public:
+    MysqlResultSet(MYSQL_RES *res) : _res(res) {
+      MYSQL_FIELD *schema;
+      while ((schema = mysql_fetch_field(_res)) != nullptr) {
+        _schemas.emplace_back(schema);
+      }
+    }
+
+    void each(const std::function<void(const RowType &)> &fn) {
+      MYSQL_ROW row;
+      while ((row = mysql_fetch_row(_res)) != nullptr) {
+        RowType row2;
+        for (auto i = 0; i < _schemas.size(); i++) {
+          auto value = row[i] ? row[i] : "NULL";
+          row2.emplace(std::make_pair(_schemas[i]->name, value));
+        }
+        fn(row2);
+      }
+    }
+
+   private:
+    MYSQL_RES *_res = nullptr;
+    std::vector<MYSQL_FIELD *> _schemas;
+  };
+
   MYSQL *_connection = nullptr;
 
   Impl() { _connection = mysql_init(nullptr); }
@@ -31,6 +58,39 @@ class MysqlConnection::Impl {
     _connection = mysql_init(nullptr);
     return Status::ok();
   }
+
+  Status execute_sql(const std::string &sql) {
+    fmt::print("SQL: {}\n", sql);
+
+    if (mysql_query(_connection, sql.c_str()) != 0) {
+      return Status::status_ailment(err2str());
+    }
+
+    return Status::ok();
+  }
+
+  Status execute_sql_for_each(const std::string &sql,
+                              const std::function<void(const RowType &)> &fn) {
+    fmt::print("SQL: {}\n", sql);
+
+    if (mysql_query(_connection, sql.c_str()) != 0) {
+      return Status::status_ailment(err2str());
+    }
+
+    auto res = mysql_use_result(_connection);
+    if (res == nullptr) {
+      return Status::status_ailment(err2str());
+    }
+
+    MysqlResultSet results(res);
+    results.each(fn);
+    mysql_free_result(res);
+
+    return Status::ok();
+  }
+
+ private:
+  std::string err2str() const { return mysql_error(_connection); }
 };
 
 MysqlConnection::MysqlConnection() { _impl.reset(new Impl); }
@@ -50,6 +110,7 @@ Status MysqlConnection::disconnect() { return _impl->disconnect(); }
 Status MysqlConnection::create_table(std::shared_ptr<Schema> schema) {
   return Status::ok();
 }
+
 Status MysqlConnection::drop_table(const std::string &table_name) {
   return Status::ok();
 }
@@ -59,11 +120,11 @@ Status MysqlConnection::transaction(const std::function<Status()> &t) {
 }
 
 Status MysqlConnection::execute_sql(const std::string &sql) {
-  return Status::ok();
+  return _impl->execute_sql(sql);
 }
 
 Status MysqlConnection::execute_sql_for_each(
     const std::string &sql, const std::function<void(const RowType &)> &fn) {
-  return Status::ok();
+  return _impl->execute_sql_for_each(sql, fn);
 }
 }  // ookoto
