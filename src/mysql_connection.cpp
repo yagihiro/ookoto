@@ -3,10 +3,11 @@
 #include <ookoto/ookoto.h>
 #include <cstdlib>
 #include <exception>
+#include "ConnectionImpl.h"
 
 namespace ookoto {
 
-class MysqlConnection::Impl {
+class MysqlConnection::Impl : public ConnectionImpl {
  public:
   class MysqlResultSet {
    public:
@@ -34,11 +35,9 @@ class MysqlConnection::Impl {
     std::vector<MYSQL_FIELD *> _schemas;
   };
 
-  MYSQL *_connection = nullptr;
-
   Impl() { _connection = mysql_init(nullptr); }
 
-  ~Impl() { mysql_close(_connection); }
+  virtual ~Impl() { mysql_close(_connection); }
 
   Status connect(const Config &config) {
     unsigned port =
@@ -50,7 +49,13 @@ class MysqlConnection::Impl {
       return Status::status_ailment();
     }
 
-    return Status::ok();
+    auto result = start_auto_transaction();
+    if (!result.is_ok()) {
+      disconnect();
+      return result;
+    }
+
+    return result;
   }
 
   Status disconnect() {
@@ -59,7 +64,16 @@ class MysqlConnection::Impl {
     return Status::ok();
   }
 
-  Status execute_sql(const std::string &sql) {
+  Status transaction(const std::function<Status()> &t) {
+    if (t == nullptr) return Status::invalid_argument();
+
+    auto result =
+        do_auto_transaction([&]() -> Status { return do_transaction(t); });
+
+    return result;
+  }
+
+  Status execute_sql(const std::string &sql) override {
     fmt::print("SQL: {}\n", sql);
 
     if (mysql_query(_connection, sql.c_str()) != 0) {
@@ -90,7 +104,93 @@ class MysqlConnection::Impl {
   }
 
  private:
+  MYSQL *_connection = nullptr;
+
   std::string err2str() const { return mysql_error(_connection); }
+
+  std::string column_type_to_string(Schema::Type type) override {
+    static std::map<Schema::Type, std::string> mapping = {
+        {Schema::Type::kInteger, "INT"}, {Schema::Type::kBoolean, "TINYINT"},
+        {Schema::Type::kFloat, "FLOAT"}, {Schema::Type::kString, "VARCHAR"},
+        {Schema::Type::kText, "TEXT"},   {Schema::Type::kDateTime, "DATETIME"},
+        {Schema::Type::kDate, "DATE"},   {Schema::Type::kTime, "TIME"},
+        {Schema::Type::kBinary, "BLOB"},
+    };
+
+    return mapping[type];
+  }
+
+  std::string column_prop_to_string(Schema::PropertyPtr prop) override {
+    std::vector<std::string> results;
+    if (prop->not_null()) {
+      results.emplace_back("NOT NULL");
+    }
+    if (prop->unique()) {
+      results.emplace_back("UNIQUE");
+    }
+    if (prop->primary_key()) {
+      results.emplace_back("PRIMARY KEY");
+    }
+    if (prop->auto_increment()) {
+      results.emplace_back("AUTOINCREMENT");
+    }
+
+    fmt::MemoryWriter buf;
+    auto size = results.size();
+    for (auto &one : results) {
+      size -= 1;
+      buf << one;
+      if (0 < size) {
+        buf << " ";
+      }
+    }
+
+    return buf.str();
+  }
+
+  Status start_auto_transaction() {
+    if (!mysql_autocommit(_connection, 1)) {
+      return Status::status_ailment();
+    }
+    return Status::ok();
+  }
+
+  Status stop_auto_transaction() {
+    if (!mysql_autocommit(_connection, 0)) {
+      return Status::status_ailment();
+    }
+    return Status::ok();
+  }
+
+  Status do_auto_transaction(const std::function<Status()> &t) {
+    stop_auto_transaction();
+    auto result = t();
+    start_auto_transaction();
+
+    return result;
+  }
+
+  Status start_transaction() { return execute_sql("START TRANSACTION"); }
+
+  Status commit() {
+    if (!mysql_commit(_connection)) {
+      return Status::status_ailment();
+    }
+    return Status::ok();
+  }
+
+  Status rollback() {
+    if (!mysql_rollback(_connection)) {
+      return Status::status_ailment();
+    }
+    return Status::ok();
+  }
+
+  Status do_transaction(const std::function<Status()> &t) {
+    start_transaction();
+    auto result = t();
+    return (result.is_ok()) ? commit() : rollback();
+  }
 };
 
 MysqlConnection::MysqlConnection() { _impl.reset(new Impl); }
@@ -108,15 +208,15 @@ Status MysqlConnection::connect(const Config &config) {
 Status MysqlConnection::disconnect() { return _impl->disconnect(); }
 
 Status MysqlConnection::create_table(std::shared_ptr<Schema> schema) {
-  return Status::ok();
+  return _impl->create_table(schema);
 }
 
 Status MysqlConnection::drop_table(const std::string &table_name) {
-  return Status::ok();
+  return _impl->drop_table(table_name);
 }
 
 Status MysqlConnection::transaction(const std::function<Status()> &t) {
-  return Status::ok();
+  return _impl->transaction(t);
 }
 
 Status MysqlConnection::execute_sql(const std::string &sql) {
