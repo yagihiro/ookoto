@@ -22,6 +22,8 @@
 		9B5668631C9B165E00649FC6 /* Database.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9B5668561C9B165E00649FC6 /* Database.cpp */; };
 		9B5668641C9B165E00649FC6 /* Statement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9B5668571C9B165E00649FC6 /* Statement.cpp */; };
 		9B5668651C9B165E00649FC6 /* Transaction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9B5668581C9B165E00649FC6 /* Transaction.cpp */; };
+		9B56686A1C9D014500649FC6 /* ConnectionImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9B5668681C9D014500649FC6 /* ConnectionImpl.cpp */; };
+		9B56686B1C9D014500649FC6 /* ConnectionImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 9B5668691C9D014500649FC6 /* ConnectionImpl.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		9B5668571C9B165E00649FC6 /* Statement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Statement.cpp; sourceTree = "<group>"; };
 		9B5668581C9B165E00649FC6 /* Transaction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Transaction.cpp; sourceTree = "<group>"; };
 		9B5668661C9C5CB100649FC6 /* Doxyfile */ = {isa = PBXFileReference; lastKnownFileType = text; name = Doxyfile; path = ../../Doxyfile; sourceTree = "<group>"; };
+		9B5668681C9D014500649FC6 /* ConnectionImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionImpl.cpp; sourceTree = "<group>"; };
+		9B5668691C9D014500649FC6 /* ConnectionImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConnectionImpl.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +86,8 @@
 		9B5668401C99A36B00649FC6 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				9B5668681C9D014500649FC6 /* ConnectionImpl.cpp */,
+				9B5668691C9D014500649FC6 /* ConnectionImpl.h */,
 				9B5668411C99A36B00649FC6 /* mysql_connection.cpp */,
 				9B5668421C99A36B00649FC6 /* sqlite_connection.cpp */,
 			);
@@ -153,6 +159,7 @@
 				9B5668601C9B165E00649FC6 /* Transaction.h in Headers */,
 				9B56685B1C9B165E00649FC6 /* Column.h in Headers */,
 				9B56685C1C9B165E00649FC6 /* Database.h in Headers */,
+				9B56686B1C9D014500649FC6 /* ConnectionImpl.h in Headers */,
 				9B56685E1C9B165E00649FC6 /* SQLiteCpp.h in Headers */,
 				9B56685D1C9B165E00649FC6 /* Exception.h in Headers */,
 				9B56685A1C9B165E00649FC6 /* Backup.h in Headers */,
@@ -221,6 +228,7 @@
 				9B5668611C9B165E00649FC6 /* Backup.cpp in Sources */,
 				9B5668641C9B165E00649FC6 /* Statement.cpp in Sources */,
 				9B5668631C9B165E00649FC6 /* Database.cpp in Sources */,
+				9B56686A1C9D014500649FC6 /* ConnectionImpl.cpp in Sources */,
 				9B5668651C9B165E00649FC6 /* Transaction.cpp in Sources */,
 				9B5668441C99A36B00649FC6 /* sqlite_connection.cpp in Sources */,
 			);

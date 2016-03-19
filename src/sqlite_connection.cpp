@@ -2,13 +2,14 @@
 #include <cppformat/format.h>
 #include <ookoto/ookoto.h>
 #include <exception>
+#include "ConnectionImpl.h"
 
 namespace ookoto {
 
-class SqliteConnection::Impl {
+class SqliteConnection::Impl : public ConnectionImpl {
  public:
   Impl() = default;
-  ~Impl() = default;
+  virtual ~Impl() = default;
 
   bool exists_table(const std::string &table_name) const {
     return _db->tableExists(table_name);
@@ -61,35 +62,6 @@ class SqliteConnection::Impl {
     }
 
     return (loaded) ? Status::ok() : Status::not_found();
-  }
-
-  Status drop_table(const std::string &table_name) {
-    return execute_sql(fmt::format("DROP TABLE {}", table_name));
-  }
-
-  Status create_table(std::shared_ptr<Schema> schema) {
-    fmt::MemoryWriter buf;
-
-    buf << "CREATE TABLE " << schema->table_name() << " (";
-
-    auto size = schema->defined_column_size();
-    schema->each_define([&](const Schema::ColumnType &def) {
-      size -= 1;
-      buf << std::get<Schema::kColumnName>(def) << " "
-          << column_type_to_string(std::get<Schema::kColumnType>(def));
-      auto prop =
-          column_prop_to_string(std::get<Schema::kColumnProperties>(def));
-      if (!prop.empty()) {
-        buf << " " << prop;
-      }
-      if (0 < size) {
-        buf << ", ";
-      }
-    });
-
-    buf << ")";
-
-    return execute_sql(buf.str());
   }
 
   Status transaction(const std::function<Status()> &t) {
